@@ -129,6 +129,7 @@ async def fetch_unseen(client, task_manager: TaskManager):
     return len(messages)
 
 async def poll_check():
+    log_status(f"=============================================")
     log_status(f"邮件自动处理服务启动，连接服务器: {IMAP_SERVER}")
     task_manager = TaskManager(
         worker_count=WORKER_COUNT,
@@ -146,9 +147,7 @@ async def poll_check():
         log_status(f"进入轮询循环，间隔 {MAIL_POLL_INTERVAL}s")
         while True:
             await asyncio.sleep(MAIL_POLL_INTERVAL)
-            unseen_count = await fetch_unseen(client, task_manager)
-            if unseen_count == 0:
-                log_status("运行正常，未检测到未读新邮件")
+            await fetch_unseen(client, task_manager)
 
 if __name__ == "__main__":
     asyncio.run(poll_check())
