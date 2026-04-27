@@ -2,6 +2,7 @@ from imapclient import IMAPClient
 import asyncio
 import email,imaplib
 from email.header import decode_header
+from pathlib import Path
 import time
 from common.task_queue import DownloadTask, TaskManager
 from processors.novo.module import existNovoData,parseNovoData,dealNovoData
@@ -16,6 +17,8 @@ PASSWORD = "Servicebot!"
 WORKER_COUNT = 1
 TASK_MAX_RETRIES = 2
 TASK_RETRY_DELAY = 60
+TASK_STATE_FILE = Path(__file__).resolve().parent / "task_state.json"
+TASK_LOG_DIR = Path(__file__).resolve().parent / "logs"
 
 PROCESSORS = [
     {
@@ -43,6 +46,7 @@ PROCESSORS = [
         "deal": dealHaploxData,
     },
 ]
+TASK_HANDLERS = {processor["source"]: processor["deal"] for processor in PROCESSORS}
 
 def log_status(message: str):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -122,8 +126,11 @@ async def idle_check():
         worker_count=WORKER_COUNT,
         monitor_interval=30,
         logger=log_status,
+        state_file=str(TASK_STATE_FILE),
+        handlers=TASK_HANDLERS,
+        log_dir=str(TASK_LOG_DIR),
     )
-    task_manager.start()
+    await task_manager.start()
     with IMAPClient(IMAP_SERVER) as client:
         client.login(EMAIL_ACCOUNT, PASSWORD)
         log_status(f"邮箱登录成功: {EMAIL_ACCOUNT}")

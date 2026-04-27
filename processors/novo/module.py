@@ -1,4 +1,5 @@
 import re,os,subprocess,asyncio
+from contextlib import nullcontext
 from pathlib import Path
 
 from common.email_sender import send_email
@@ -36,7 +37,14 @@ def parseNovoData(text: str):
 
     return result
 
-async def dealNovoData(result: dict):
+def append_log(log_file: str, message: str):
+    if not log_file:
+        return
+    with open(log_file, "a", encoding="utf-8") as fh:
+        fh.write(message.rstrip() + "\n")
+
+
+async def dealNovoData(result: dict, log_file: str = None):
     """
     使用 Docker 调用 lnd 客户端登录诺禾致源云并下载数据
     result: dict，包含 'account', 'password', 'data_path'
@@ -57,11 +65,17 @@ async def dealNovoData(result: dict):
     bash -c './lnd login -u {account} -p {password} && ./lnd cp -d oss://{data_path} {save_path} && {NOTIFY_CLI} --recipients {notify_recipients} --subject {account}批次数据下载完成 --body 存储路径为:{save_path}'
     """    
     # 下载数据
-    print("🚀 开始下载数据（异步）...")
+    append_log(log_file, f"开始 Novo 下载任务，account={account}, data_path={data_path}")
+    append_log(log_file, f"下载命令:\n{cmd}")
     send_email(notify_email, f"{account}批次数据下载开始", f"🚀 开始下载数据:\n{data_path} \n 下载命令为:{cmd} \n 存储路径为:{save_path}")
-    process = await asyncio.create_subprocess_shell(
-        cmd
-    )
-    await process.wait()  # 等待进程结束
+    log_context = open(log_file, "a", encoding="utf-8") if log_file else nullcontext(subprocess.DEVNULL)
+    with log_context as log_fh:
+        process = await asyncio.create_subprocess_shell(
+            cmd,
+            stdout=log_fh,
+            stderr=log_fh,
+        )
+        await process.wait()  # 等待进程结束
+    append_log(log_file, f"Novo 下载任务结束，returncode={process.returncode}")
     return process.returncode
   

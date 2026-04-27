@@ -1,4 +1,5 @@
 import re, os, subprocess, asyncio
+from contextlib import nullcontext
 from pathlib import Path
 
 from common.email_sender import send_email
@@ -6,6 +7,12 @@ from common.email_sender import send_email
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAYFILE_C_BIN = Path(__file__).resolve().parent / "bin" / "rayfile-c"
 NOTIFY_CLI = PROJECT_ROOT / "servicebot_send_email"
+
+def append_log(log_file: str, message: str):
+    if not log_file:
+        return
+    with open(log_file, "a", encoding="utf-8") as fh:
+        fh.write(message.rstrip() + "\n")
 
 def existHaploxData(text: str):
     """检查邮件正文是否包含上饶海普洛斯医学检验实验室有限公司"""
@@ -36,7 +43,7 @@ def parseHaploxData(text: str):
         result["title"] = title_match.group(0)
     return result
 
-async def dealHaploxData(result: dict):
+async def dealHaploxData(result: dict, log_file: str = None):
     """
     处理海普洛斯数据下载
     result: dict，包含 'command' 和 'title'
@@ -59,6 +66,8 @@ async def dealHaploxData(result: dict):
     
     # 构建完整命令（在指定目录执行）
     send_cmd = f"cd {save_path} && {command}"
+    append_log(log_file, f"开始海普洛斯下载任务，title={title}, date={date}")
+    append_log(log_file, f"下载命令:\n{send_cmd}")
     send_email(
         notify_email,
         f"{title}海普洛斯数据批次数据下载开始",
@@ -66,9 +75,14 @@ async def dealHaploxData(result: dict):
     )
     exec_cmd = f"{send_cmd} && {NOTIFY_CLI} --recipients {notify_recipients} --subject {title}海普洛斯数据批次数据下载完成 --body 存储路径为:{save_path+date+title}"
     # 执行下载命令
-    process = await asyncio.create_subprocess_shell(
-        exec_cmd
-    )
-    await process.wait()  # 等待进程结束  
+    log_context = open(log_file, "a", encoding="utf-8") if log_file else nullcontext(subprocess.DEVNULL)
+    with log_context as log_fh:
+        process = await asyncio.create_subprocess_shell(
+            exec_cmd,
+            stdout=log_fh,
+            stderr=log_fh,
+        )
+        await process.wait()  # 等待进程结束
+    append_log(log_file, f"海普洛斯下载任务结束，returncode={process.returncode}")
     return process.returncode
     
