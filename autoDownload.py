@@ -9,6 +9,7 @@ from processors.novo.module import existNovoData,parseNovoData,dealNovoData
 from processors.baidu_disk.module import existBaiduDiskData,parseBaiduDiskData,dealBaiduDiskData
 from processors.hyk.module import existHYkData,parseHYkData,dealHYkData
 from processors.haplox.module import existHaploxData,parseHaploxData,dealHaploxData
+from processors.jmdna.module import existJMDNAData,parseJMDNAData,dealJMDNAData
 
 # 邮箱配置
 IMAP_SERVER = "smtphz.qiye.163.com"
@@ -17,6 +18,7 @@ PASSWORD = "Servicebot!"
 WORKER_COUNT = 1
 TASK_MAX_RETRIES = 2
 TASK_RETRY_DELAY = 60
+MAIL_POLL_INTERVAL = 30
 TASK_STATE_FILE = Path(__file__).resolve().parent / "task_state.json"
 TASK_LOG_DIR = Path(__file__).resolve().parent / "logs"
 
@@ -45,6 +47,13 @@ PROCESSORS = [
         "parse": parseHaploxData,
         "deal": dealHaploxData,
     },
+    {
+        "source": "jmdna",
+        "exists": existJMDNAData,
+        "parse": parseJMDNAData,
+        "deal": dealJMDNAData,
+        "allow_without_auto_tag": True,
+    },
 ]
 TASK_HANDLERS = {processor["source"]: processor["deal"] for processor in PROCESSORS}
 
@@ -58,11 +67,6 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
         subject, encoding = decode_header(msg["Subject"])[0]
         if isinstance(subject, bytes):
             subject = subject.decode(encoding or "utf-8", errors="ignore")
-        # 只处理主题包含 [自动下载] 的邮件
-        if "【自动下载】" not in subject:
-            return
-        print("📩 处理自动下载邮件:", subject)
-
         body = ""
         if msg.is_multipart():
             # 遍历邮件的各个部分
@@ -82,10 +86,12 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
             # print(body.strip())
             matched = False
             body_text = body.strip()
+            searchable_text = f"{subject}\n{body_text}"
             for processor in PROCESSORS:
-                if processor["exists"](body_text):
+                can_process = "【自动下载】" in subject or processor.get("allow_without_auto_tag", False)
+                if can_process and processor["exists"](searchable_text):
                     matched = True
-                    payload = processor["parse"](body_text)
+                    payload = processor["parse"](searchable_text)
                     task = DownloadTask(
                         source=processor["source"],
                         subject=subject,
@@ -96,7 +102,9 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
                         retry_delay=TASK_RETRY_DELAY,
                     )
                     await task_manager.enqueue(task)
-            if not matched:
+            if matched:
+                log_status(f"邮件 uid={uid} 已创建下载任务: {subject}")
+            elif "【自动下载】" in subject:
                 log_status(f"邮件 uid={uid} 主题匹配自动下载，但正文没有匹配到处理模块")
 
         else:
@@ -120,7 +128,7 @@ async def fetch_unseen(client, task_manager: TaskManager):
         await asyncio.gather(*tasks)
     return len(messages)
 
-async def idle_check():
+async def poll_check():
     log_status(f"邮件自动处理服务启动，连接服务器: {IMAP_SERVER}")
     task_manager = TaskManager(
         worker_count=WORKER_COUNT,
@@ -135,20 +143,12 @@ async def idle_check():
         client.login(EMAIL_ACCOUNT, PASSWORD)
         log_status(f"邮箱登录成功: {EMAIL_ACCOUNT}")
         client.select_folder("INBOX")
-        log_status("已进入 INBOX，开始首次未读邮件检查")
-        await fetch_unseen(client, task_manager)
-        log_status("首次检查完成，进入 IDLE 监听循环")
+        log_status(f"进入轮询循环，间隔 {MAIL_POLL_INTERVAL}s")
         while True:
-            client.idle()
-            responses = await asyncio.to_thread(client.idle_check, timeout=30)
-            client.idle_done()
-            if responses:
-                log_status(f"收到 IMAP IDLE 响应: {responses}")
-            else:
-                log_status("IDLE 本轮无事件，开始周期性未读邮件检查")
+            await asyncio.sleep(MAIL_POLL_INTERVAL)
             unseen_count = await fetch_unseen(client, task_manager)
             if unseen_count == 0:
                 log_status("运行正常，未检测到未读新邮件")
 
 if __name__ == "__main__":
-    asyncio.run(idle_check())
+    asyncio.run(poll_check())

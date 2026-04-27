@@ -4,3 +4,4 @@ processors/*/bin/
 task_state.json
 task_state.json.tmp
 logs/
+service.pid
