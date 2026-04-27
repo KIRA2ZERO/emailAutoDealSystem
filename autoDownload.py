@@ -18,7 +18,7 @@ PASSWORD = "Servicebot!"
 WORKER_COUNT = 1
 TASK_MAX_RETRIES = 2
 TASK_RETRY_DELAY = 60
-MAIL_POLL_INTERVAL = 30
+MAIL_POLL_INTERVAL = 180
 TASK_STATE_FILE = Path(__file__).resolve().parent / "task_state.json"
 TASK_LOG_DIR = Path(__file__).resolve().parent / "logs"
 
@@ -144,6 +144,7 @@ async def poll_check():
         client.login(EMAIL_ACCOUNT, PASSWORD)
         log_status(f"邮箱登录成功: {EMAIL_ACCOUNT}")
         client.select_folder("INBOX")
+        await fetch_unseen(client, task_manager)
         log_status(f"进入轮询循环，间隔 {MAIL_POLL_INTERVAL}s")
         while True:
             await asyncio.sleep(MAIL_POLL_INTERVAL)

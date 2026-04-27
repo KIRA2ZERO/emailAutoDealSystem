@@ -268,8 +268,9 @@ class TaskManager:
     def _ensure_task_log_file(self, task: DownloadTask):
         if task.log_file or not self.log_dir:
             return
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        task.log_file = str(self.log_dir / f"{task.task_id}_{task.source}.log")
+        task_log_dir = self.log_dir / task.source
+        task_log_dir.mkdir(parents=True, exist_ok=True)
+        task.log_file = str(task_log_dir / f"{task.task_id}.log")
 
     @staticmethod
     def _extract_returncode(result):
