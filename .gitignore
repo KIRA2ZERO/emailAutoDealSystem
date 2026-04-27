@@ -1,1 +1,3 @@
 *.pyc
+servicebot_send_email
+processors/*/bin/
