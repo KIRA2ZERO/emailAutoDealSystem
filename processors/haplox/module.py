@@ -63,6 +63,7 @@ async def dealHaploxData(result: dict, log_file: str = None):
         "zhuojunyu@verygenome.com"
     ]
     notify_recipients = ",".join(notify_email)
+    log_path = log_file or "未生成"
     
     # 构建完整命令（在指定目录执行）
     send_cmd = f"cd {save_path} && {command}"
@@ -71,9 +72,9 @@ async def dealHaploxData(result: dict, log_file: str = None):
     send_email(
         notify_email,
         f"{title}海普洛斯数据批次数据下载开始",
-        f"🚀 开始下载数据:\n{title} \n下载命令: {send_cmd} \n存储路径: {save_path+date+title}"
+        f"🚀 开始下载数据:\n{title} \n下载命令: {send_cmd} \n存储路径: {save_path+date+title}\n日志路径为:{log_path}"
     )
-    exec_cmd = f"{send_cmd} && {NOTIFY_CLI} --recipients {notify_recipients} --subject {title}海普洛斯数据批次数据下载完成 --body 存储路径为:{save_path+date+title}"
+    exec_cmd = f"{send_cmd} && {NOTIFY_CLI} --recipients {notify_recipients} --subject {title}海普洛斯数据批次数据下载完成 --body 存储路径为:{save_path+date+title}；日志路径为:{log_path}"
     # 执行下载命令
     log_context = open(log_file, "a", encoding="utf-8") if log_file else nullcontext(subprocess.DEVNULL)
     with log_context as log_fh:

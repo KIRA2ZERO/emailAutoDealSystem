@@ -39,12 +39,13 @@ async def dealBaiduDiskData(result_list: list, log_file: str = None):
         "zhuojunyu@verygenome.com"
     ]
     notify_recipients = ",".join(notify_email)
+    log_path = log_file or "未生成"
     result_list = [result.replace(" ", "") for result in result_list]
     file_paths = ' '.join(result_list)
     save_path = []
     for path in result_list:
         save_path.append(f"/SCL/BaiduDisk/4112800527_verygenome/{os.path.basename((path))}\n")
-    cmd = f"{BAIDUPCS_GO_CMD} d {file_paths} && {NOTIFY_CLI} --recipients {notify_recipients} --subject 百度网盘数据下载完成 --body 存储路径为:{''.join(save_path)}"
+    cmd = f"{BAIDUPCS_GO_CMD} d {file_paths} && {NOTIFY_CLI} --recipients {notify_recipients} --subject 百度网盘数据下载完成 --body 存储路径为:{''.join(save_path)}；日志路径为:{log_path}"
     # 下载数据
     result_text = "\n".join(result_list)
     append_log(log_file, f"开始百度网盘下载任务，文件数量={len(result_list)}")
@@ -53,7 +54,7 @@ async def dealBaiduDiskData(result_list: list, log_file: str = None):
     send_email(
         notify_email, 
         f"百度网盘数据下载开始", 
-        f"🚀 开始下载数据:\n{result_text} \n 存储路径为:{''.join(save_path)}"
+        f"🚀 开始下载数据:\n{result_text} \n 存储路径为:{''.join(save_path)}\n日志路径为:{log_path}"
     )    
     log_context = open(log_file, "a", encoding="utf-8") if log_file else nullcontext(subprocess.DEVNULL)
     with log_context as log_fh:

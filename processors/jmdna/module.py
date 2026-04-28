@@ -73,6 +73,7 @@ async def dealJMDNAData(result: dict, log_file: str = None):
         raise ValueError(f"JMDNA 邮件缺少必要字段: {', '.join(missing)}")
 
     save_path = f"/SCL/BaiduDisk/JMDNAData/{os.path.basename(oss_path.rstrip('/'))}"
+    log_path = log_file or "未生成"
     notify_email = [
         "zhangchuang@verygenome.com",
         "xiongtianzhu@verygenome.com",
@@ -102,7 +103,7 @@ async def dealJMDNAData(result: dict, log_file: str = None):
             "--subject",
             shlex.quote(f"{title} 解码生物数据下载完成"),
             "--body",
-            shlex.quote(f"存储路径为:{save_path}"),
+            shlex.quote(f"存储路径为:{save_path}；日志路径为:{log_path}"),
         ]
     )
 
@@ -113,7 +114,7 @@ async def dealJMDNAData(result: dict, log_file: str = None):
     send_email(
         notify_email,
         f"{title} 解码生物数据下载开始",
-        f"🚀 开始下载数据:\n{oss_path}\n下载命令为:{cmd}\n存储路径为:{save_path}",
+        f"🚀 开始下载数据:\n{oss_path}\n下载命令为:{cmd}\n存储路径为:{save_path}\n日志路径为:{log_path}",
     )
 
     log_context = open(log_file, "a", encoding="utf-8") if log_file else nullcontext(subprocess.DEVNULL)

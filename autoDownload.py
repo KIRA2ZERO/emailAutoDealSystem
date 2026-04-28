@@ -19,6 +19,7 @@ WORKER_COUNT = 1
 TASK_MAX_RETRIES = 2
 TASK_RETRY_DELAY = 60
 MAIL_POLL_INTERVAL = 180
+MONITOR_INTERVAL = 180
 TASK_STATE_FILE = Path(__file__).resolve().parent / "task_state.json"
 TASK_LOG_DIR = Path(__file__).resolve().parent / "logs"
 
@@ -133,7 +134,7 @@ async def poll_check():
     log_status(f"邮件自动处理服务启动，连接服务器: {IMAP_SERVER}")
     task_manager = TaskManager(
         worker_count=WORKER_COUNT,
-        monitor_interval=30,
+        monitor_interval=MONITOR_INTERVAL,
         logger=log_status,
         state_file=str(TASK_STATE_FILE),
         handlers=TASK_HANDLERS,

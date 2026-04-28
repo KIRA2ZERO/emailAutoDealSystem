@@ -53,6 +53,7 @@ async def dealNovoData(result: dict, log_file: str = None):
     password = result.get("password")
     data_path = result.get("data_path")    
     save_path = f"/SCL/BaiduDisk/NovoData/{account}"
+    log_path = log_file or "未生成"
     notify_email = ["zhangchuang@verygenome.com","xiongtianzhu@verygenome.com","zhuyuxuan@verygenome.com","zhuojunyu@verygenome.com"]
     notify_recipients = ",".join(notify_email)
     # 构建下载命令
@@ -62,12 +63,12 @@ async def dealNovoData(result: dict, log_file: str = None):
     -v /SCL:/SCL \
     -w /root \
     ubuntu:24.04 \
-    bash -c './lnd login -u {account} -p {password} && ./lnd cp -d oss://{data_path} {save_path} && {NOTIFY_CLI} --recipients {notify_recipients} --subject {account}批次数据下载完成 --body 存储路径为:{save_path}'
+    bash -c './lnd login -u {account} -p {password} && ./lnd cp -d oss://{data_path} {save_path} && {NOTIFY_CLI} --recipients {notify_recipients} --subject {account}批次数据下载完成 --body 存储路径为:{save_path}；日志路径为:{log_path}'
     """    
     # 下载数据
     append_log(log_file, f"开始 Novo 下载任务，account={account}, data_path={data_path}")
     append_log(log_file, f"下载命令:\n{cmd}")
-    send_email(notify_email, f"{account}批次数据下载开始", f"🚀 开始下载数据:\n{data_path} \n 下载命令为:{cmd} \n 存储路径为:{save_path}")
+    send_email(notify_email, f"{account}批次数据下载开始", f"🚀 开始下载数据:\n{data_path} \n 下载命令为:{cmd} \n 存储路径为:{save_path}\n日志路径为:{log_path}")
     log_context = open(log_file, "a", encoding="utf-8") if log_file else nullcontext(subprocess.DEVNULL)
     with log_context as log_fh:
         process = await asyncio.create_subprocess_shell(
