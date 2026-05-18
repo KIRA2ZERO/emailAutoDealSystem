@@ -15,7 +15,7 @@ OSSUTIL_BIN = "ossutil"
 
 def existJMDNAData(text: str):
     return (
-        "解码云数据下载提醒" in text
+        "解码云数据下载提醒" in text or "解码原始数据及报告释放" in text
     )
 
 
@@ -26,7 +26,7 @@ def parseJMDNAData(text: str):
     if title_match:
         result["title"] = title_match.group(1).strip()
 
-    oss_path_match = re.search(r"阿里云路径[:：]\s*(oss://\S+)", text)
+    oss_path_match = re.search(r"阿里云(?:交付)?路径[:：]\s*(oss://\S+)", text)
     if oss_path_match:
         result["oss_path"] = oss_path_match.group(1).strip()
 
