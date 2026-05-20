@@ -27,3 +27,22 @@ def get_config(path: str, default: Any = None) -> Any:
             return default
         value = value[part]
     return value
+
+
+def get_list(path: str, default: Iterable[Any] = None) -> list:
+    value = get_config(path, default or [])
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def get_path(path: str, default: Any = None) -> Path:
+    value = get_config(path, default)
+    if value is None:
+        return None
+    result = Path(value)
+    if not result.is_absolute():
+        result = PROJECT_ROOT / result
+    return result
