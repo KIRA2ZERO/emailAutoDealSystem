@@ -4,12 +4,11 @@ import re
 import shlex
 import subprocess
 from contextlib import nullcontext
-from pathlib import Path
 
+from common.config import get_list, get_path
 from common.email_sender import send_email
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-NOTIFY_CLI = PROJECT_ROOT / "servicebot_send_email"
+NOTIFY_CLI = get_path("paths.notify_cli")
 OSSUTIL_BIN = "ossutil"
 
 
@@ -74,13 +73,7 @@ async def dealJMDNAData(result: dict, log_file: str = None):
 
     save_path = f"/SCL/BaiduDisk/JMDNAData/{os.path.basename(oss_path.rstrip('/'))}"
     log_path = log_file or "未生成"
-    notify_email = [
-        "zhangchuang@verygenome.com",
-        "xiongtianzhu@verygenome.com",
-        "zhuyuxuan@verygenome.com",
-        "zhuojunyu@verygenome.com",
-        "lishuangxi@verygenome.com",
-    ]
+    notify_email = get_list("notifications.default_recipients")
     notify_recipients = ",".join(notify_email)
 
     cmd = " ".join(

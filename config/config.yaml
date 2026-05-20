@@ -1,0 +1,31 @@
+email:
+  imap:
+    server: smtphz.qiye.163.com
+    account: servicebot@verygenome.com
+    password: Servicebot!
+    folder: INBOX
+  smtp:
+    server: smtphz.qiye.163.com
+    port: 465
+    sender: servicebot@verygenome.com
+    password: Servicebot!
+    use_ssl: true
+
+service:
+  worker_count: 1
+  task_max_retries: 2
+  task_retry_delay: 60
+  mail_poll_interval: 180
+  monitor_interval: 180
+  auto_download_tag: "【自动下载】"
+
+paths:
+  notify_cli: servicebot_send_email
+
+notifications:
+  default_recipients:
+    - zhangchuang@verygenome.com
+    - xiongtianzhu@verygenome.com
+    - zhuyuxuan@verygenome.com
+    - zhuojunyu@verygenome.com
+    - lishuangxi@verygenome.com

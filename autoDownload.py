@@ -4,6 +4,7 @@ import email,imaplib
 from email.header import decode_header
 from pathlib import Path
 import time
+from common.config import get_config
 from common.task_queue import DownloadTask, TaskManager
 from processors.novo.module import existNovoData,parseNovoData,dealNovoData
 from processors.baidu_disk.module import existBaiduDiskData,parseBaiduDiskData,dealBaiduDiskData
@@ -12,14 +13,16 @@ from processors.haplox.module import existHaploxData,parseHaploxData,dealHaploxD
 from processors.jmdna.module import existJMDNAData,parseJMDNAData,dealJMDNAData
 
 # 邮箱配置
-IMAP_SERVER = "smtphz.qiye.163.com"
-EMAIL_ACCOUNT = "servicebot@verygenome.com"
-PASSWORD = "Servicebot!"
-WORKER_COUNT = 1
-TASK_MAX_RETRIES = 2
-TASK_RETRY_DELAY = 60
-MAIL_POLL_INTERVAL = 180
-MONITOR_INTERVAL = 180
+IMAP_SERVER = get_config("email.imap.server")
+EMAIL_ACCOUNT = get_config("email.imap.account")
+PASSWORD = get_config("email.imap.password")
+IMAP_FOLDER = get_config("email.imap.folder")
+WORKER_COUNT = get_config("service.worker_count")
+TASK_MAX_RETRIES = get_config("service.task_max_retries")
+TASK_RETRY_DELAY = get_config("service.task_retry_delay")
+MAIL_POLL_INTERVAL = get_config("service.mail_poll_interval")
+MONITOR_INTERVAL = get_config("service.monitor_interval")
+AUTO_DOWNLOAD_TAG = get_config("service.auto_download_tag")
 TASK_STATE_FILE = Path(__file__).resolve().parent / "task_state.json"
 TASK_LOG_DIR = Path(__file__).resolve().parent / "logs"
 
@@ -89,7 +92,7 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
             body_text = body.strip()
             searchable_text = f"{subject}\n{body_text}"
             for processor in PROCESSORS:
-                can_process = "【自动下载】" in subject or processor.get("allow_without_auto_tag", False)
+                can_process = AUTO_DOWNLOAD_TAG in subject or processor.get("allow_without_auto_tag", False)
                 if can_process and processor["exists"](searchable_text):
                     matched = True
                     payload = processor["parse"](searchable_text)
@@ -105,7 +108,7 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
                     await task_manager.enqueue(task)
             if matched:
                 log_status(f"邮件 uid={uid} 已创建下载任务: {subject}")
-            elif "【自动下载】" in subject:
+            elif AUTO_DOWNLOAD_TAG in subject:
                 log_status(f"邮件 uid={uid} 主题匹配自动下载，但正文没有匹配到处理模块")
 
         else:
@@ -144,7 +147,7 @@ async def poll_check():
     with IMAPClient(IMAP_SERVER) as client:
         client.login(EMAIL_ACCOUNT, PASSWORD)
         log_status(f"邮箱登录成功: {EMAIL_ACCOUNT}")
-        client.select_folder("INBOX")
+        client.select_folder(IMAP_FOLDER)
         await fetch_unseen(client, task_manager)
         log_status(f"进入轮询循环，间隔 {MAIL_POLL_INTERVAL}s")
         while True:

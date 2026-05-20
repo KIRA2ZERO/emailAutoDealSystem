@@ -2,11 +2,11 @@ import re, os, subprocess, asyncio
 from contextlib import nullcontext
 from pathlib import Path
 
+from common.config import get_list, get_path
 from common.email_sender import send_email
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RAYFILE_C_BIN = Path(__file__).resolve().parent / "bin" / "rayfile-c"
-NOTIFY_CLI = PROJECT_ROOT / "servicebot_send_email"
+NOTIFY_CLI = get_path("paths.notify_cli")
 
 def append_log(log_file: str, message: str):
     if not log_file:
@@ -50,13 +50,7 @@ async def dealHYkData(result: dict, log_file: str = None):
     save_path = f"/SCL/BaiduDisk/hykData/"
     
     # 通知邮箱列表
-    notify_email = [
-        "zhangchuang@verygenome.com",
-        "xiongtianzhu@verygenome.com",
-        "zhuyuxuan@verygenome.com",
-        "zhuojunyu@verygenome.com",
-        "lishuangxi@verygenome.com"
-    ]
+    notify_email = get_list("notifications.default_recipients")
     notify_recipients = ",".join(notify_email)
     log_path = log_file or "未生成"
     

@@ -2,12 +2,12 @@ import re,os,subprocess,asyncio,shlex
 from contextlib import nullcontext
 from pathlib import Path
 
+from common.config import get_list, get_path
 from common.email_sender import send_email
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BAIDUPCS_GO_BIN = Path(__file__).resolve().parent / "bin" / "BaiduPCS-Go"
 BAIDUPCS_GO_CMD = str(BAIDUPCS_GO_BIN) if BAIDUPCS_GO_BIN.exists() else "BaiduPCS-Go"
-NOTIFY_CLI = PROJECT_ROOT / "servicebot_send_email"
+NOTIFY_CLI = get_path("paths.notify_cli")
 BAIDU_SAVE_ROOT = "/SCL/BaiduDisk/4112800527_verygenome"
 
 def append_log(log_file: str, message: str):
@@ -43,13 +43,7 @@ def build_item_log_file(log_file: str, index: int, basename: str):
 
 
 async def dealBaiduDiskData(result_list: list, log_file: str = None):
-    notify_email = [
-        "zhangchuang@verygenome.com",
-        "xiongtianzhu@verygenome.com",
-        "zhuyuxuan@verygenome.com",
-        "zhuojunyu@verygenome.com",
-        "lishuangxi@verygenome.com"
-    ]
+    notify_email = get_list("notifications.default_recipients")
     notify_recipients = ",".join(notify_email)
     result_list = [result.replace(" ", "") for result in result_list if result.replace(" ", "")]
     if not result_list:

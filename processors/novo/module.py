@@ -2,11 +2,11 @@ import re,os,subprocess,asyncio
 from contextlib import nullcontext
 from pathlib import Path
 
+from common.config import get_list, get_path
 from common.email_sender import send_email
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LND_BIN = Path(__file__).resolve().parent / "bin" / "lnd"
-NOTIFY_CLI = PROJECT_ROOT / "servicebot_send_email"
+NOTIFY_CLI = get_path("paths.notify_cli")
 
 def existNovoData(text:str):
     if "北京诺禾致源科技股份有限公司" in text:
@@ -54,7 +54,7 @@ async def dealNovoData(result: dict, log_file: str = None):
     data_path = result.get("data_path")    
     save_path = f"/SCL/BaiduDisk/NovoData/{account}"
     log_path = log_file or "未生成"
-    notify_email = ["zhangchuang@verygenome.com","xiongtianzhu@verygenome.com","zhuyuxuan@verygenome.com","zhuojunyu@verygenome.com","lishuangxi@verygenome.com"]
+    notify_email = get_list("notifications.default_recipients")
     notify_recipients = ",".join(notify_email)
     # 构建下载命令
     cmd = f"""
