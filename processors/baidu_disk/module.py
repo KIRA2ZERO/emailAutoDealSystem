@@ -47,7 +47,8 @@ async def dealBaiduDiskData(result_list: list, log_file: str = None):
         "zhangchuang@verygenome.com",
         "xiongtianzhu@verygenome.com",
         "zhuyuxuan@verygenome.com",
-        "zhuojunyu@verygenome.com"
+        "zhuojunyu@verygenome.com",
+        "lishuangxi@verygenome.com"
     ]
     notify_recipients = ",".join(notify_email)
     result_list = [result.replace(" ", "") for result in result_list if result.replace(" ", "")]

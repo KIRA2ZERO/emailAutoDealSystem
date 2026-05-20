@@ -79,6 +79,7 @@ async def dealJMDNAData(result: dict, log_file: str = None):
         "xiongtianzhu@verygenome.com",
         "zhuyuxuan@verygenome.com",
         "zhuojunyu@verygenome.com",
+        "lishuangxi@verygenome.com",
     ]
     notify_recipients = ",".join(notify_email)
 

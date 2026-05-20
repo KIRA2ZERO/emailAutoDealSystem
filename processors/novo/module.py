@@ -54,7 +54,7 @@ async def dealNovoData(result: dict, log_file: str = None):
     data_path = result.get("data_path")    
     save_path = f"/SCL/BaiduDisk/NovoData/{account}"
     log_path = log_file or "未生成"
-    notify_email = ["zhangchuang@verygenome.com","xiongtianzhu@verygenome.com","zhuyuxuan@verygenome.com","zhuojunyu@verygenome.com"]
+    notify_email = ["zhangchuang@verygenome.com","xiongtianzhu@verygenome.com","zhuyuxuan@verygenome.com","zhuojunyu@verygenome.com","lishuangxi@verygenome.com"]
     notify_recipients = ",".join(notify_email)
     # 构建下载命令
     cmd = f"""

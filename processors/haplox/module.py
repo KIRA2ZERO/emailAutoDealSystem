@@ -60,7 +60,8 @@ async def dealHaploxData(result: dict, log_file: str = None):
         "zhangchuang@verygenome.com",
         "xiongtianzhu@verygenome.com",
         "zhuyuxuan@verygenome.com",
-        "zhuojunyu@verygenome.com"
+        "zhuojunyu@verygenome.com",
+        "lishuangxi@verygenome.com"
     ]
     notify_recipients = ",".join(notify_email)
     log_path = log_file or "未生成"
