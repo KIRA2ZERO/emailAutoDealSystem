@@ -25,8 +25,9 @@ MONITOR_INTERVAL = get_config("service.monitor_interval")
 AUTO_DOWNLOAD_TAG = get_config("service.auto_download_tag")
 TASK_STATE_FILE = Path(__file__).resolve().parent / "task_state.json"
 TASK_LOG_DIR = Path(__file__).resolve().parent / "logs"
+PROCESSOR_ENABLED = get_config("processors.enabled", {})
 
-PROCESSORS = [
+ALL_PROCESSORS = [
     {
         "source": "novo",
         "exists": existNovoData,
@@ -58,6 +59,17 @@ PROCESSORS = [
         "deal": dealJMDNAData,
         "allow_without_auto_tag": True,
     },
+]
+
+
+def is_processor_enabled(source: str) -> bool:
+    if not isinstance(PROCESSOR_ENABLED, dict):
+        return True
+    return PROCESSOR_ENABLED.get(source, True)
+
+
+PROCESSORS = [
+    processor for processor in ALL_PROCESSORS if is_processor_enabled(processor["source"])
 ]
 TASK_HANDLERS = {processor["source"]: processor["deal"] for processor in PROCESSORS}
 
@@ -135,6 +147,7 @@ async def fetch_unseen(client, task_manager: TaskManager):
 async def poll_check():
     log_status(f"=============================================")
     log_status(f"邮件自动处理服务启动，连接服务器: {IMAP_SERVER}")
+    log_status(f"启用处理器: {', '.join(TASK_HANDLERS) or '无'}")
     task_manager = TaskManager(
         worker_count=WORKER_COUNT,
         monitor_interval=MONITOR_INTERVAL,

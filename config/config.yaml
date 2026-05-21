@@ -29,3 +29,11 @@ notifications:
     - zhuyuxuan@verygenome.com
     - zhuojunyu@verygenome.com
     - lishuangxi@verygenome.com
+
+processors:
+  enabled:
+    novo: true
+    baidu_disk: false
+    hyk: true
+    haplox: true
+    jmdna: true
