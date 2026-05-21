@@ -1,5 +1,4 @@
 *.pyc
-servicebot_send_email
 processors/*/bin/
 task_state.json
 task_state.json.tmp

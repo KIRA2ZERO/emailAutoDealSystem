@@ -1,1 +1,2 @@
 processors/haplox/bin/rayfile-c filter=lfs diff=lfs merge=lfs -text
+servicebot_send_email filter=lfs diff=lfs merge=lfs -text
