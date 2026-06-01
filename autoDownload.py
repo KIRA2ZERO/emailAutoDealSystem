@@ -107,6 +107,7 @@ def close_mailbox(client):
         pass
 
 async def process_email(client, uid, msg, task_manager: TaskManager):
+    mark_as_seen = False
     try:
         # 解析主题
         subject, encoding = decode_header(msg["Subject"])[0]
@@ -148,6 +149,7 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
                     )
                     await task_manager.enqueue(task)
             if matched:
+                mark_as_seen = True
                 log_status(f"邮件 uid={uid} 已创建下载任务: {subject}")
             elif AUTO_DOWNLOAD_TAG in subject:
                 log_status(f"邮件 uid={uid} 主题匹配自动下载，但正文没有匹配到处理模块")
@@ -159,8 +161,8 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
         print("❌ 处理邮件出错:", e)
 
     finally:
-        # 不管中间报不报错，最后都把邮件标记为已读
-        client.add_flags(uid, [r"\Seen"])
+        if mark_as_seen:
+            client.add_flags(uid, [r"\Seen"])
 
 async def fetch_unseen(client, task_manager: TaskManager):
     messages = client.search(["UNSEEN"])
