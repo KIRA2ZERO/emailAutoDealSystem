@@ -1,9 +1,10 @@
-from imapclient import IMAPClient
 import asyncio
 import email,imaplib
+import socket
 from email.header import decode_header
 from pathlib import Path
 import time
+from imapclient import IMAPClient
 from common.config import get_config
 from common.task_queue import DownloadTask, TaskManager
 from processors.novo.module import existNovoData,parseNovoData,dealNovoData
@@ -23,9 +24,17 @@ TASK_RETRY_DELAY = get_config("service.task_retry_delay")
 MAIL_POLL_INTERVAL = get_config("service.mail_poll_interval")
 MONITOR_INTERVAL = get_config("service.monitor_interval")
 AUTO_DOWNLOAD_TAG = get_config("service.auto_download_tag")
+IMAP_RECONNECT_DELAY = get_config("email.imap.reconnect_delay", 30)
 TASK_STATE_FILE = Path(__file__).resolve().parent / "task_state.json"
 TASK_LOG_DIR = Path(__file__).resolve().parent / "logs"
 PROCESSOR_ENABLED = get_config("processors.enabled", {})
+IMAP_CONNECTION_ERRORS = (
+    imaplib.IMAP4.abort,
+    imaplib.IMAP4.error,
+    OSError,
+    TimeoutError,
+    socket.error,
+)
 
 ALL_PROCESSORS = [
     {
@@ -76,6 +85,26 @@ TASK_HANDLERS = {processor["source"]: processor["deal"] for processor in PROCESS
 def log_status(message: str):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{timestamp}] {message}", flush=True)
+
+def connect_mailbox():
+    client = IMAPClient(IMAP_SERVER)
+    try:
+        client.login(EMAIL_ACCOUNT, PASSWORD)
+        log_status(f"邮箱登录成功: {EMAIL_ACCOUNT}")
+        client.select_folder(IMAP_FOLDER)
+        log_status(f"已选择邮箱目录: {IMAP_FOLDER}")
+        return client
+    except Exception:
+        close_mailbox(client)
+        raise
+
+def close_mailbox(client):
+    if client is None:
+        return
+    try:
+        client.logout()
+    except Exception:
+        pass
 
 async def process_email(client, uid, msg, task_manager: TaskManager):
     try:
@@ -157,15 +186,28 @@ async def poll_check():
         log_dir=str(TASK_LOG_DIR),
     )
     await task_manager.start()
-    with IMAPClient(IMAP_SERVER) as client:
-        client.login(EMAIL_ACCOUNT, PASSWORD)
-        log_status(f"邮箱登录成功: {EMAIL_ACCOUNT}")
-        client.select_folder(IMAP_FOLDER)
-        await fetch_unseen(client, task_manager)
-        log_status(f"进入轮询循环，间隔 {MAIL_POLL_INTERVAL}s")
-        while True:
-            await asyncio.sleep(MAIL_POLL_INTERVAL)
+    while True:
+        client = None
+        try:
+            client = connect_mailbox()
             await fetch_unseen(client, task_manager)
+            log_status(f"进入轮询循环，间隔 {MAIL_POLL_INTERVAL}s")
+            while True:
+                await asyncio.sleep(MAIL_POLL_INTERVAL)
+                await fetch_unseen(client, task_manager)
+        except IMAP_CONNECTION_ERRORS as exc:
+            log_status(
+                f"IMAP连接异常，{IMAP_RECONNECT_DELAY}s 后重连: "
+                f"{type(exc).__name__}: {exc}"
+            )
+        except Exception as exc:
+            log_status(
+                f"邮件轮询异常，{IMAP_RECONNECT_DELAY}s 后重试: "
+                f"{type(exc).__name__}: {exc}"
+            )
+        finally:
+            close_mailbox(client)
+        await asyncio.sleep(IMAP_RECONNECT_DELAY)
 
 if __name__ == "__main__":
     asyncio.run(poll_check())
