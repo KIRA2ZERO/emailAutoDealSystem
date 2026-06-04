@@ -117,6 +117,7 @@ async def dealJMDNAData(result: dict, log_file: str = None):
             cmd,
             stdout=log_fh,
             stderr=log_fh,
+            start_new_session=True,
         )
         await process.wait()
     append_log(log_file, f"JMDNA 下载任务结束，returncode={process.returncode}")

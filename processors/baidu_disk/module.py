@@ -120,6 +120,7 @@ async def dealBaiduDiskData(result_list: list, log_file: str = None):
                 segment["cmd"],
                 stdout=log_fh,
                 stderr=log_fh,
+                start_new_session=True,
             )
             await process.wait()
         append_log(

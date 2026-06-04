@@ -75,6 +75,7 @@ async def dealNovoData(result: dict, log_file: str = None):
             cmd,
             stdout=log_fh,
             stderr=log_fh,
+            start_new_session=True,
         )
         await process.wait()  # 等待进程结束
     append_log(log_file, f"Novo 下载任务结束，returncode={process.returncode}")

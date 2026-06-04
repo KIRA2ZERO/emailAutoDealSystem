@@ -1,5 +1,6 @@
 import asyncio
 import email,imaplib
+import signal
 import socket
 from email.header import decode_header
 from pathlib import Path
@@ -35,6 +36,9 @@ IMAP_CONNECTION_ERRORS = (
     TimeoutError,
     socket.error,
 )
+FETCH_MESSAGE_PART = "BODY.PEEK[]"
+MESSAGE_BODY_KEYS = (b"BODY[]", b"RFC822", "BODY[]", "RFC822")
+FALLBACK_FETCH_MESSAGE_PART = "BODY[]"
 
 ALL_PROCESSORS = [
     {
@@ -106,6 +110,24 @@ def close_mailbox(client):
     except Exception:
         pass
 
+def get_message_bytes(uid, message_data, log_missing=True):
+    for key in MESSAGE_BODY_KEYS:
+        body = message_data.get(key)
+        if isinstance(body, bytes):
+            return body
+
+    for key, body in message_data.items():
+        normalized_key = key.decode(errors="ignore") if isinstance(key, bytes) else str(key)
+        normalized_key = normalized_key.upper()
+        if isinstance(body, bytes) and (
+            normalized_key == "RFC822" or normalized_key.startswith("BODY[")
+        ):
+            return body
+
+    if log_missing:
+        log_status(f"邮件 uid={uid} 未找到正文数据，fetch keys={list(message_data.keys())}")
+    return None
+
 async def process_email(client, uid, msg, task_manager: TaskManager):
     mark_as_seen = False
     try:
@@ -163,16 +185,32 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
     finally:
         if mark_as_seen:
             client.add_flags(uid, [r"\Seen"])
+    return mark_as_seen
 
 async def fetch_unseen(client, task_manager: TaskManager):
     messages = client.search(["UNSEEN"])
     log_status(f"未读邮件检查完成，数量: {len(messages)}")
     if messages:
         tasks = []
-        for uid, message_data in client.fetch(messages, "RFC822").items():
-            msg = email.message_from_bytes(message_data[b"RFC822"])
+        missing_body_uids = []
+        for uid, message_data in client.fetch(messages, [FETCH_MESSAGE_PART]).items():
+            message_bytes = get_message_bytes(uid, message_data, log_missing=False)
+            if message_bytes is None:
+                missing_body_uids.append(uid)
+                continue
+            msg = email.message_from_bytes(message_bytes)
             tasks.append(process_email(client, uid, msg, task_manager))
         await asyncio.gather(*tasks)
+        for uid in missing_body_uids:
+            fallback_data = client.fetch([uid], [FALLBACK_FETCH_MESSAGE_PART]).get(uid, {})
+            message_bytes = get_message_bytes(uid, fallback_data)
+            if message_bytes is None:
+                continue
+            msg = email.message_from_bytes(message_bytes)
+            processed = await process_email(client, uid, msg, task_manager)
+            if not processed:
+                client.remove_flags(uid, [r"\Seen"])
+                log_status(f"邮件 uid={uid} 未被本实例处理，已恢复为未读")
     return len(messages)
 
 async def poll_check():

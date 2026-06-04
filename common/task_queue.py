@@ -129,6 +129,7 @@ class TaskManager:
             return
 
         restored = 0
+        stale_running = 0
         skipped = 0
         for record in data.get("tasks", []):
             source = record.get("source")
@@ -140,7 +141,13 @@ class TaskManager:
             task = DownloadTask.from_record(record, handler)
             self._ensure_task_log_file(task)
             self.registry[task.task_id] = task
-            if task.status in {"queued", "running", "retrying"}:
+            if task.status == "running":
+                task.status = "failed"
+                task.finished_at = time.time()
+                task.last_error = "服务启动时发现任务仍为 running，未自动重试以避免重复下载"
+                self._log_task(task, task.last_error)
+                stale_running += 1
+            elif task.status in {"queued", "retrying"}:
                 task.status = "queued"
                 task.started_at = None
                 task.finished_at = None
@@ -148,9 +155,9 @@ class TaskManager:
                 restored += 1
         self.logger(
             f"任务状态文件已加载: total={len(self.registry)} "
-            f"restored={restored} skipped={skipped}"
+            f"restored={restored} stale_running={stale_running} skipped={skipped}"
         )
-        if restored:
+        if restored or stale_running:
             await self.save_state()
 
     async def save_state(self):

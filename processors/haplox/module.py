@@ -77,6 +77,7 @@ async def dealHaploxData(result: dict, log_file: str = None):
             exec_cmd,
             stdout=log_fh,
             stderr=log_fh,
+            start_new_session=True,
         )
         await process.wait()  # 等待进程结束
     append_log(log_file, f"海普洛斯下载任务结束，returncode={process.returncode}")

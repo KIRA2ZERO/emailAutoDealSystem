@@ -19,7 +19,7 @@ if [[ -f "$PID_FILE" ]]; then
   rm -f "$PID_FILE"
 fi
 
-nohup python3 autoDownload.py >> "$SERVICE_LOG" 2>&1 &
+setsid nohup python3 autoDownload.py >> "$SERVICE_LOG" 2>&1 &
 PID="$!"
 echo "$PID" > "$PID_FILE"
 
