@@ -1,4 +1,4 @@
-import re, os, subprocess, asyncio
+import re, os, subprocess, asyncio, shlex
 from contextlib import nullcontext
 from pathlib import Path
 
@@ -14,6 +14,27 @@ def append_log(log_file: str, message: str):
     with open(log_file, "a", encoding="utf-8") as fh:
         fh.write(message.rstrip() + "\n")
 
+def extract_hyk_title(command: str):
+    if not command:
+        return None
+
+    try:
+        command_parts = shlex.split(command)
+    except ValueError:
+        command_parts = []
+
+    if "-s" in command_parts:
+        source_index = command_parts.index("-s") + 1
+        if source_index < len(command_parts):
+            source_path = command_parts[source_index].rstrip("/")
+            if source_path:
+                return os.path.basename(source_path)
+
+    title_match = re.search(r"-s\s+['\"]?/?([^'\"\s/]+)['\"]?\s+-d\b", command)
+    if title_match:
+        return title_match.group(1)
+    return None
+
 def existHYkData(text: str):
     """检查邮件正文是否包含华银康高通量测序交付平台"""
     if "华银康高通量测序交付平台" in text:
@@ -26,16 +47,14 @@ def parseHYkData(text: str):
     从邮件中提取rayfile命令和标题
     返回格式: {"command": str, "title": str}
     """
-    result = {"command": None,"title":None}
+    result = {"command": None, "title": None}
 
     # 提取rayfile命令（从rayfile-c到-d）
     command_match = re.search(r'(rayfile-c.*?-d)\b', text)
     if command_match:
         result["command"] = command_match.group(1)
 
-    title_match = re.search(r'(?<=-s\s/)([^/\s]+)', result["command"] )
-    if title_match:
-        result["title"] = title_match.group(1)
+    result["title"] = extract_hyk_title(result["command"])
     return result
 
 async def dealHYkData(result: dict, log_file: str = None):
@@ -43,8 +62,13 @@ async def dealHYkData(result: dict, log_file: str = None):
     处理华银康数据下载
     result: dict，包含 'command' 和 'title'
     """
-    title = result["title"] 
-    command = result["command"].replace("rayfile-c", str(RAYFILE_C_BIN), 1) + " ./"
+    title = result.get("title")
+    raw_command = result.get("command")
+    missing = [key for key, value in {"command": raw_command, "title": title}.items() if not value]
+    if missing:
+        raise ValueError(f"HYK 邮件缺少必要字段: {', '.join(missing)}")
+
+    command = raw_command.replace("rayfile-c", str(RAYFILE_C_BIN), 1) + " ./"
 
     # 设置保存路径
     save_path = f"/SCL/BaiduDisk/hykData/"
