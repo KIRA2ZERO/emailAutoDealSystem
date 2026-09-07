@@ -99,11 +99,11 @@ async def dealBenagenData(result: dict, log_file: str = None):
             save_path = BENAGEN_SAVE_ROOT / delivery_name
             save_path.mkdir(parents=True, exist_ok=True)
 
-            append_log(log_file, f"读取 Benagen 交付页面: {page_url}")
+            append_log(log_file, f"读取贝纳基因交付页面: {page_url}")
             page_html = await asyncio.to_thread(_fetch_page, page_url)
             download_urls = extract_download_urls(page_html, page_url)
             if not download_urls:
-                raise ValueError(f"Benagen 交付页面没有解析到数据链接: {page_url}")
+                raise ValueError(f"贝纳基因交付页面没有解析到数据链接: {page_url}")
 
             append_log(log_file, f"解析到 {len(download_urls)} 个下载链接")
             append_log(log_file, f"存储路径: {save_path}")
@@ -135,10 +135,10 @@ async def dealBenagenData(result: dict, log_file: str = None):
                     )
                     return process.returncode
 
-            append_log(log_file, f"Benagen 交付批次下载完成: {delivery_name}")
+            append_log(log_file, f"贝纳基因交付批次下载完成: {delivery_name}")
             send_email(
                 notify_email,
-                f"{delivery_name} Benagen 数据下载完成",
+                f"{delivery_name} 贝纳基因数据下载完成",
                 f"存储路径:{save_path}\n日志路径:{log_file or '未生成'}",
             )
 
