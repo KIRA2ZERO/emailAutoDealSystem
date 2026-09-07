@@ -13,6 +13,7 @@ from processors.baidu_disk.module import existBaiduDiskData,parseBaiduDiskData,d
 from processors.hyk.module import existHYkData,parseHYkData,dealHYkData
 from processors.haplox.module import existHaploxData,parseHaploxData,dealHaploxData
 from processors.jmdna.module import existJMDNAData,parseJMDNAData,dealJMDNAData
+from processors.benagen.module import existBenagenData,parseBenagenData,dealBenagenData
 
 # 邮箱配置
 IMAP_SERVER = get_config("email.imap.server")
@@ -70,7 +71,14 @@ ALL_PROCESSORS = [
         "exists": existJMDNAData,
         "parse": parseJMDNAData,
         "deal": dealJMDNAData,
-        "allow_without_auto_tag": True,
+        "allow_without_auto_tag": False,
+    },
+    {
+        "source": "benagen",
+        "exists": existBenagenData,
+        "parse": parseBenagenData,
+        "deal": dealBenagenData,
+        "allow_without_auto_tag": False,
     },
 ]
 
@@ -135,19 +143,23 @@ async def process_email(client, uid, msg, task_manager: TaskManager):
         subject, encoding = decode_header(msg["Subject"])[0]
         if isinstance(subject, bytes):
             subject = subject.decode(encoding or "utf-8", errors="ignore")
-        body = ""
+        body_parts = []
         if msg.is_multipart():
-            # 遍历邮件的各个部分
             for part in msg.walk():
                 content_type = part.get_content_type()
                 content_disposition = str(part.get("Content-Disposition"))
-                if content_type == "text/plain" and "attachment" not in content_disposition:
+                if content_type in {"text/plain", "text/html"} and "attachment" not in content_disposition:
                     charset = part.get_content_charset() or "utf-8"
-                    body = part.get_payload(decode=True).decode(charset, errors="ignore")
-                    break
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        body_parts.append(payload.decode(charset, errors="ignore"))
         else:
             charset = msg.get_content_charset() or "utf-8"
-            body = msg.get_payload(decode=True).decode(charset, errors="ignore")
+            payload = msg.get_payload(decode=True)
+            if payload:
+                body_parts.append(payload.decode(charset, errors="ignore"))
+
+        body = "\n".join(body_parts)
 
         if body:
             # print("📜 邮件正文：")

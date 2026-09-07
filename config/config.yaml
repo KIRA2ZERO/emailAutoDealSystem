@@ -29,6 +29,9 @@ notifications:
     - zhuyuxuan@verygenome.com
     - zhuojunyu@verygenome.com
     - lishuangxi@verygenome.com
+    - zengsiying@verygenome.com
+    - chenjingmei@verygenome.com
+    - yuanjiaqi@verygenome.com
 
 processors:
   enabled:
@@ -37,3 +40,4 @@ processors:
     hyk: true
     haplox: true
     jmdna: true
+    benagen: true
